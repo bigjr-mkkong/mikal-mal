@@ -114,6 +114,7 @@ IMPL:
   - {IMPL: xslt}
   - {IMPL: yorick}
   - {IMPL: zig}
+  - {IMPL: myc}
 
   # See .travis.yml (for older osx / xcode tests)
 # - {IMPL: objc, NO_DOCKER: 1, OS: xcode7}}
