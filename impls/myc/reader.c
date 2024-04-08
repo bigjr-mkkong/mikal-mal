@@ -5,6 +5,8 @@
 
 #define MAX_SYM     512
 
+//#define READER_TEST
+
 char single_symtab[] = {'[', ']', '{', '}', '(', ')', '\'', '`', '~', '^', '@'};
 
 char special_char[] = {'[', ']', '{', '}', '(', ')', '\'', ' ', '\"', '`', ';'};
@@ -48,7 +50,29 @@ static int get_token_len(char *st){
 
     return endpt;
 }
+/**
+ *  This function needs to have a more elegant implementation
+ * 
+ **/
+enum token_type get_token_type(struct Token *token){
+    char *tok_str = token->tok;
+    int len = strlen(tok_str);
+   
+    if(tok_str[0] == '\"' && tok_str[len-1] == '\"')
+        return TOKEN_STRING;
 
+    if(tok_str[0] == '0'){
+        fprintf(stderr, "Number shouldn't contain leading zeros\n");
+        return -1;
+    }
+
+    for(int i=0; i<len; i++){
+        if(tok_str[i] < '0' || tok_str[i] > '9')
+            return TOKEN_REGULAR;
+    }
+
+    return TOKEN_NUMBER;
+}
 
 struct Reader *tokenize(char *line){
     int line_len = strlen(line);
@@ -75,13 +99,17 @@ struct Reader *tokenize(char *line){
             wrtpt += 1;
         }else{
             token_len = get_token_len(&(line[next]));
+            if(token_len < 0){
+                return NULL;
+            }
             memcpy((token_list[wrtpt].tok), &(line[next]), token_len);
-            if(memcmp((token_list[wrtpt].tok), ")", token_len) == 0){
+            if(strcmp((token_list[wrtpt].tok), ")") == 0){
                 token_list[wrtpt].type = R_PAREN;
-            }else if(memcmp((token_list[wrtpt].tok), "(", token_len) == 0){
+            }else if(strcmp((token_list[wrtpt].tok), "(") == 0){
                 token_list[wrtpt].type = L_PAREN;
             }else{
-                token_list[wrtpt].type = TOKEN_REGULAR;
+                //token_list[wrtpt].type = TOKEN_REGULAR;
+                token_list[wrtpt].type = get_token_type(&(token_list[wrtpt]));
             }
             next += token_len;
             wrtpt += 1;
@@ -139,6 +167,8 @@ struct AST_Node *AST_create(struct Reader *tk_reader, int begin, int end){
 
     int ops_pt = 0;  
 
+    int paren_match;
+
     for(;idx < end; ops_pt++){
         idx++;
         struct Token *tok = &(tk_list[idx]);     
@@ -147,6 +177,7 @@ struct AST_Node *AST_create(struct Reader *tk_reader, int begin, int end){
             subexp_paren_cnt = 0;
             ops[ops_pt] = AST_create(tk_reader, idx, idx);
         }else if(tok->type == L_PAREN){
+            paren_match = 0;
             subexp_start = idx;
             for(; idx<=end; idx++){
                 tok = &(tk_list[idx]);
@@ -158,9 +189,15 @@ struct AST_Node *AST_create(struct Reader *tk_reader, int begin, int end){
                 }
 
                 if(subexp_paren_cnt == 0){
+                    paren_match = 1;
                     ops[ops_pt] = AST_create(tk_reader, subexp_start, idx);
                     break;
                 }
+            }
+
+            if(paren_match == 0){
+                fprintf(stderr, "epression not close\n");
+                return NULL;
             }
         }else{
             continue;
@@ -198,16 +235,27 @@ struct AST_Node *line_reader(char *line){
     struct Reader *tk_reader = tokenize(line);
     struct AST_Node *AST_root = AST_create(tk_reader, 0, tk_reader->max_token-1);
     
-    //free tk_reader
+    //TODO: free tk_reader
     return AST_root;
 }
-/*
+
+struct Token *peek_operator(struct AST_Node *root){
+    if(root->ops[0]->isleaf){
+        return &(root->ops[0]->token);
+    }else{
+        return NULL;
+    }
+}
+
+#ifdef READER_TEST
+
 int main(void){
-    char str[] = "(nil)";
+    char str[] = "(+ 3 4 )";
     struct Reader *tk_reader = tokenize(str);
 
     struct AST_Node *AST_root = AST_create(tk_reader, 0, tk_reader->max_token - 1);
 
-    pr_str(AST_root);
+    printf("%s\n", peek_operator(AST_root)->tok);
 }
-*/
+
+#endif
