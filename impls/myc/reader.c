@@ -11,6 +11,8 @@ char single_symtab[] = {'[', ']', '{', '}', '(', ')', '\'', '`', '~', '^', '@'};
 
 char special_char[] = {'[', ']', '{', '}', '(', ')', '\'', ' ', '\"', '`', ';'};
 
+char *operator[] = {"+", "-", "*", "/"};
+
 int is_special_char(int ch){
     for(int i=0; i<sizeof(special_char); i++){
         if(ch == special_char[i]){
@@ -61,9 +63,14 @@ enum token_type get_token_type(struct Token *token){
     if(tok_str[0] == '\"' && tok_str[len-1] == '\"')
         return TOKEN_STRING;
 
-    if(tok_str[0] == '0'){
+    if(tok_str[0] == '0' && len > 1){
         fprintf(stderr, "Number shouldn't contain leading zeros\n");
         return -1;
+    }
+
+    for(int i=0; i<sizeof(operator)/sizeof(char*); i++){
+        char *op = operator[i];
+        if(strcmp(op, tok_str) == 0) return TOKEN_OPERATOR;
     }
 
     for(int i=0; i<len; i++){
@@ -122,13 +129,16 @@ struct Reader *tokenize(char *line){
     return token_reader;
 }
 
-static int AST_Node_isleaf(struct AST_Node *ptr){
+int AST_Node_isleaf(struct AST_Node *ptr){
     return ptr->isleaf;
 }
 
 struct AST_Node *AST_Node_create(struct Token *tok, struct AST_Node **ops, int isleaf){
     struct AST_Node *new_node = (struct AST_Node*)malloc(sizeof(struct AST_Node));
-    memset(new_node, 0, sizeof(struct AST_Node));
+
+    for(int i=0; i<64; i++)
+        new_node->ops[i] = NULL;
+
     if(tok != NULL)
         memcpy(&(new_node->token), tok, sizeof(struct AST_Node));
     
@@ -146,6 +156,7 @@ void AST_destroy(struct AST_Node *root){
             AST_destroy(root->ops[i]);
         }
     }
+    free(root->gen_val);
     free(root);
     return;
 }
@@ -209,25 +220,30 @@ struct AST_Node *AST_create(struct Reader *tk_reader, int begin, int end){
    return AST_Node_create(NULL, ops, 0);
 }
 
-void pr_str(struct AST_Node *root){
-    if(root == NULL) return;
+void pr_str(struct AST_Node *pos){
+    struct Token *tok;
+    if(pos == NULL) return;
 
-    if(AST_Node_isleaf(root)){
-        printf("%s", root->token.tok);
+    if(AST_Node_isleaf(pos)){ 
+        tok = gen2token(pos->gen_val);
+        memcpy(&(pos->token), tok, sizeof(struct Token));
+        free(tok);
+        printf("%s", pos->token.tok);
         return;
-    }
+    } 
 
     printf("(");
     for(int i=0; i<63; i++){
-        if(root->ops[i] != NULL){
-            pr_str(root->ops[i]);
+        if(pos->ops[i] != NULL){
+            pr_str(pos->ops[i]);
         }
 
-        if(root->ops[i+1] != NULL){
+        if(pos->ops[i+1] != NULL){
             printf(" ");
         }
     }
     printf(")");
+
     return;
 }
 
@@ -239,23 +255,15 @@ struct AST_Node *line_reader(char *line){
     return AST_root;
 }
 
-struct Token *peek_operator(struct AST_Node *root){
-    if(root->ops[0]->isleaf){
-        return &(root->ops[0]->token);
-    }else{
-        return NULL;
-    }
-}
-
 #ifdef READER_TEST
 
 int main(void){
-    char str[] = "(+ 3 4 )";
+    char str[] = "+";
     struct Reader *tk_reader = tokenize(str);
 
     struct AST_Node *AST_root = AST_create(tk_reader, 0, tk_reader->max_token - 1);
 
-    printf("%s\n", peek_operator(AST_root)->tok);
+    pr_str(AST_root, AST_root);
 }
 
 #endif
