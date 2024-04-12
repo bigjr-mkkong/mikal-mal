@@ -42,6 +42,15 @@ struct env_t *init_env(void){
     return ret_env;
 }
 
+void destroy_env(struct env_t *env){
+    for(int i=0; i<64; i++){
+        if(env->alloc_map[i] != 0){
+            free_env_slot(env, i);
+        }
+    }
+    free(env);
+}
+
 void add_env_entry(struct env_t *env, char *name, struct Gen_type_t *(*func)(struct Gen_type_t **)){
     
     int alloc_pt = alloc_env_slot(env);

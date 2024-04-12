@@ -12,7 +12,7 @@ struct Gen_type_t *make_integer(int x){
 }
 
 struct Gen_type_t *make_string(char *str){
-    int str_len = strlen(str);
+    int str_len = ROUND_UP(strlen(str));
     struct Gen_type_t *ret = (struct Gen_type_t*)malloc(sizeof(struct Gen_type_t));
     ret->value.str = (char*)malloc(str_len);
     strcpy(ret->value.str, str);
@@ -21,7 +21,7 @@ struct Gen_type_t *make_string(char *str){
 }
 
 struct Gen_type_t *make_symbol(char *str){
-    int str_len = strlen(str);
+    int str_len = ROUND_UP(strlen(str));
     struct Gen_type_t *ret = (struct Gen_type_t*)malloc(sizeof(struct Gen_type_t));
     ret->value.symbol = (char*)malloc(str_len);
     strcpy(ret->value.str, str);
@@ -30,7 +30,7 @@ struct Gen_type_t *make_symbol(char *str){
 }
 
 struct Gen_type_t *make_operator(char *x){
-    int str_len = strlen(x);
+    int str_len = ROUND_UP(strlen(x));
     struct Gen_type_t *ret = (struct Gen_type_t*)malloc(sizeof(struct Gen_type_t));
     ret->value.op = (char*)malloc(str_len);
     strcpy(ret->value.op, x);
@@ -49,6 +49,11 @@ void destroy_gentype(struct Gen_type_t *gentype){
             free(gentype->value.str);
             free(gentype);
             break;
+        case TYPE_OPERATOR:
+            free(gentype->value.str);
+            free(gentype);
+            break;
+
         default:
             free(gentype);
             break;
@@ -112,7 +117,7 @@ struct Token *gen2token(struct Gen_type_t *gentype){
 
         case TYPE_SYMBOL:
             tok = (struct Token *)malloc(sizeof(struct Token));
-            strcpy(tok->tok, gentype->value.symbol);
+            strcpy(tok->tok, gentype->value.op);
             tok->type = TOKEN_REGULAR;
             break;
 

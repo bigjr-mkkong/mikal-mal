@@ -2,6 +2,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "reader.h"
+#include <sys/param.h>
 
 #define MAX_SYM     512
 
@@ -129,6 +130,13 @@ struct Reader *tokenize(char *line){
     return token_reader;
 }
 
+static void destroy_reader(struct Reader *tk_reader){
+    free(tk_reader->token_list);
+    free(tk_reader);
+    return;
+}
+
+
 int AST_Node_isleaf(struct AST_Node *ptr){
     return ptr->isleaf;
 }
@@ -156,7 +164,7 @@ void AST_destroy(struct AST_Node *root){
             AST_destroy(root->ops[i]);
         }
     }
-    free(root->gen_val);
+    destroy_gentype(root->gen_val);
     free(root);
     return;
 }
@@ -249,9 +257,10 @@ void pr_str(struct AST_Node *pos){
 
 struct AST_Node *line_reader(char *line){
     struct Reader *tk_reader = tokenize(line);
-    struct AST_Node *AST_root = AST_create(tk_reader, 0, tk_reader->max_token-1);
+    struct AST_Node *AST_root = AST_create(tk_reader, 0, MAX(0, tk_reader->max_token-1));
     
-    //TODO: free tk_reader
+    destroy_reader(tk_reader);
+    free(line);
     return AST_root;
 }
 

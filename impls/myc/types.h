@@ -3,6 +3,8 @@
 
 #include "reader.h"
 
+#define ROUND_UP(x)     (((x) + 7) & (~7))
+
 enum Gen_types{
     TYPE_INTEGER,
     TYPE_STRING,

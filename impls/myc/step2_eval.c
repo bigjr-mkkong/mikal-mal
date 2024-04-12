@@ -6,8 +6,12 @@
 #include "env.h"
 /*
  * TODO:
- *      Debug memory bugs (if there are any of them)
  *      make sure all errors are been cateched and will not trigger a segfault
+ *          - wrong cases:
+ *              (+ 3 0004)
+ *              (r 4 5)
+ *              (+ 4)
+ *              (+ a b)
  */
 
 struct Gen_type_t *mikal_add(struct Gen_type_t **list_add){
@@ -192,5 +196,5 @@ int main(void){
         PRINT(exp);
         AST_destroy(ast);
     }
-
+    destroy_env(meta_env);
 }

@@ -18,6 +18,7 @@ struct env_t *init_env(void);
 void add_env_entry(struct env_t *env, char *name, struct Gen_type_t *(*func)(struct Gen_type_t **));
 void remove_env_entry(struct env_t *env, int idx);
 struct env_entry *lookup_env(struct env_t *env, char *name);
+void destroy_env(struct env_t *env);
 
 
 #endif
