@@ -23,6 +23,15 @@ int is_special_char(int ch){
     return 0;
 }
 
+static int is_integer(char *num){
+    int len = strlen(num);
+    for(int i=0; i<len; i++){
+        if(num[i] < '0' || num[i] > '9')
+            return 0;
+    }
+    return 1;
+}
+
 static int get_token_len(char *st){
     for(int i=0; i<sizeof(single_symtab); i++){
         if(*st == single_symtab[i]){
@@ -66,7 +75,7 @@ enum token_type get_token_type(struct Token *token){
 
     if(tok_str[0] == '0' && len > 1){
         fprintf(stderr, "Number shouldn't contain leading zeros\n");
-        return -1;
+        return UNDEFINED;
     }
 
     for(int i=0; i<sizeof(operator)/sizeof(char*); i++){
@@ -75,18 +84,20 @@ enum token_type get_token_type(struct Token *token){
     }
 
     for(int i=0; i<len; i++){
-        if(tok_str[i] < '0' || tok_str[i] > '9')
-            return TOKEN_REGULAR;
+        if(\
+            is_integer(tok_str) || \
+            (tok_str[0] == '-' && is_integer(&(tok_str[1]))) \
+          )
+            return TOKEN_NUMBER;
     }
-
-    return TOKEN_NUMBER;
+    return TOKEN_REGULAR;
 }
 
 struct Reader *tokenize(char *line){
     int line_len = strlen(line);
     
-    struct Reader *token_reader = malloc(sizeof(struct Reader)); 
-    token_reader->token_list = (struct Token*)malloc(sizeof(struct Token) * 512);
+    struct Reader *token_reader = calloc(1, sizeof(struct Reader)); 
+    token_reader->token_list = (struct Token*)calloc(512, sizeof(struct Token));
     struct Token *token_list = token_reader->token_list;
     int wrtpt = 0;
     
@@ -108,6 +119,8 @@ struct Reader *tokenize(char *line){
         }else{
             token_len = get_token_len(&(line[next]));
             if(token_len < 0){
+                free(token_reader->token_list);
+                free(token_reader);
                 return NULL;
             }
             memcpy((token_list[wrtpt].tok), &(line[next]), token_len);
@@ -116,8 +129,12 @@ struct Reader *tokenize(char *line){
             }else if(strcmp((token_list[wrtpt].tok), "(") == 0){
                 token_list[wrtpt].type = L_PAREN;
             }else{
-                //token_list[wrtpt].type = TOKEN_REGULAR;
                 token_list[wrtpt].type = get_token_type(&(token_list[wrtpt]));
+                if(token_list[wrtpt].type == UNDEFINED){
+                    free(token_reader->token_list);
+                    free(token_reader);
+                    return NULL;
+                }
             }
             next += token_len;
             wrtpt += 1;
@@ -142,7 +159,7 @@ int AST_Node_isleaf(struct AST_Node *ptr){
 }
 
 struct AST_Node *AST_Node_create(struct Token *tok, struct AST_Node **ops, int isleaf){
-    struct AST_Node *new_node = (struct AST_Node*)malloc(sizeof(struct AST_Node));
+    struct AST_Node *new_node = (struct AST_Node*)calloc(1, sizeof(struct AST_Node));
 
     for(int i=0; i<64; i++)
         new_node->ops[i] = NULL;
@@ -164,7 +181,8 @@ void AST_destroy(struct AST_Node *root){
             AST_destroy(root->ops[i]);
         }
     }
-    destroy_gentype(root->gen_val);
+    if(root->gen_val != NULL)
+        destroy_gentype(root->gen_val);
     free(root);
     return;
 }
@@ -257,6 +275,9 @@ void pr_str(struct AST_Node *pos){
 
 struct AST_Node *line_reader(char *line){
     struct Reader *tk_reader = tokenize(line);
+    if(tk_reader == NULL)
+        return NULL;
+
     struct AST_Node *AST_root = AST_create(tk_reader, 0, MAX(0, tk_reader->max_token-1));
     
     destroy_reader(tk_reader);

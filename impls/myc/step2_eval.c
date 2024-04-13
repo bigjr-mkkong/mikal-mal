@@ -6,29 +6,23 @@
 #include "env.h"
 /*
  * TODO:
- *      make sure all errors are been cateched and will not trigger a segfault
- *          - wrong cases:
- *              (+ 3 0004)
- *              (r 4 5)
- *              (+ 4)
- *              (+ a b)
+ *          implement multi-argument for add/sub/mul/div
  */
 
 struct Gen_type_t *mikal_add(struct Gen_type_t **list_add){
-    struct Gen_type_t *adder1 = list_add[0];
-    struct Gen_type_t *adder2 = list_add[1];
-
-    if(adder1->type != TYPE_INTEGER){
-        fprintf(stderr, "Failed to add: number 1 is in incorrect type\n");
-        return NULL;
-    }
-    if(adder2->type != TYPE_INTEGER){
-        fprintf(stderr, "Failed to add: number 2 is in incorrect type\n");
-        return NULL;
+    struct Gen_type_t *adder = NULL;
+    long sum = 0;
+    for(int i=0; list_add[i] != NULL; i++){
+        adder = list_add[i];
+        if(adder->type != TYPE_INTEGER){
+            fprintf(stderr, "Failed to add: number is in incorrect type\n");
+            return NULL;
+        }
+        sum += adder->value.integer;
     }
 
     struct Gen_type_t *result;
-    result = make_integer(adder1->value.integer + adder2->value.integer);
+    result = make_integer(sum);
 
     return result;
 }
@@ -53,20 +47,19 @@ struct Gen_type_t *mikal_sub(struct Gen_type_t **list_sub){
 }
 
 struct Gen_type_t *mikal_mul(struct Gen_type_t **list_mul){
-    struct Gen_type_t *mul1 = list_mul[0];
-    struct Gen_type_t *mul2 = list_mul[1];
-
-    if(mul1->type != TYPE_INTEGER){
-        fprintf(stderr, "Failed to multiply: number 1 is in incorrect type\n");
-        return NULL;
-    }
-    if(mul2->type != TYPE_INTEGER){
-        fprintf(stderr, "Failed to multiply: number 2 is in incorrect type\n");
-        return NULL;
+    struct Gen_type_t *mul_num = NULL;
+    long mul_result = 1;
+    for(int i=0; list_mul[i] != NULL; i++){
+        mul_num = list_mul[i];
+        if(mul_num->type != TYPE_INTEGER){
+            fprintf(stderr, "Failed to mul: number is in incorrect type\n");
+            return NULL;
+        }
+        mul_result *= mul_num->value.integer;
     }
 
     struct Gen_type_t *result;
-    result = make_integer(mul1->value.integer * mul2->value.integer);
+    result = make_integer(mul_result);
 
     return result;
 }
@@ -99,6 +92,11 @@ struct Gen_type_t *apply(struct Gen_type_t *op, struct Gen_type_t **args, struct
     struct env_entry *ent;
     struct Gen_type_t *ret = NULL;
 
+    if(op == NULL){
+        ret = make_empty();
+        return ret;
+    }
+
     switch (op->type){
         case TYPE_OPERATOR:
             ent = lookup_env(env, op->value.op);
@@ -117,11 +115,6 @@ struct Gen_type_t *apply(struct Gen_type_t *op, struct Gen_type_t **args, struct
 }
 
 struct Gen_type_t *eval(struct AST_Node *root, struct env_t *env){
-    /*
-     * there is a gen_val field inside struct AST_Node
-     * we can put translated/evaluated gen type data there
-     * so memory management is easier
-     */
     if(AST_Node_isleaf(root)){
         root->gen_val = token2gen(&(root->token));
         return root->gen_val;
@@ -132,6 +125,8 @@ struct Gen_type_t *eval(struct AST_Node *root, struct env_t *env){
         for(int i=0; i<64; i++){
             if(root->ops[i] != NULL){
                args[i] = eval(root->ops[i], env);
+               if(args[i] == NULL)
+                   return NULL;
             }
         }
 
@@ -142,6 +137,9 @@ struct Gen_type_t *eval(struct AST_Node *root, struct env_t *env){
         }
 
         eval_result = apply(args[0], &(args[1]), env);
+        if(eval_result == NULL){
+            return NULL;
+        }
         root->gen_val = eval_result;
         root->isleaf = root_isleaf;
         return eval_result;
@@ -164,7 +162,10 @@ struct AST_Node *READ(char *prompt){
 
 struct AST_Node *EVAL(struct AST_Node *root, struct env_t *env){
     struct Gen_type_t *eval_result = eval(root, env);
-    return root;
+    if(eval_result == NULL)
+        return NULL;
+    else
+        return root;
 }
 
 void PRINT(struct AST_Node *root){

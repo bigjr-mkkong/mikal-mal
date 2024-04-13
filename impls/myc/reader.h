@@ -9,7 +9,8 @@ enum token_type{
     L_PAREN,
     R_PAREN,
     TOKEN_SPECIAL,
-    TOKEN_OPERATOR
+    TOKEN_OPERATOR,
+    UNDEFINED
 };
 
 struct Token{

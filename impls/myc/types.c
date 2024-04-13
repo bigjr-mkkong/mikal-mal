@@ -4,7 +4,7 @@
 #include "types.h"
 #include "reader.h"
 
-struct Gen_type_t *make_integer(int x){
+struct Gen_type_t *make_integer(long x){
     struct Gen_type_t *ret = (struct Gen_type_t*)malloc(sizeof(struct Gen_type_t));
     ret->value.integer = x;
     ret->type = TYPE_INTEGER;
@@ -38,6 +38,16 @@ struct Gen_type_t *make_operator(char *x){
     return ret;
 }
 
+/*
+ * Now we assert all lists are empty list
+ * Gonna change it in future
+ */
+struct Gen_type_t *make_list(){
+    struct Gen_type_t *ret = (struct Gen_type_t*)malloc(sizeof(struct Gen_type_t));
+    ret->type = TYPE_LIST;
+    return ret;
+}
+
 void destroy_gentype(struct Gen_type_t *gentype){
 
     switch(gentype->type){
@@ -50,7 +60,7 @@ void destroy_gentype(struct Gen_type_t *gentype){
             free(gentype);
             break;
         case TYPE_OPERATOR:
-            free(gentype->value.str);
+            free(gentype->value.op);
             free(gentype);
             break;
 
@@ -119,6 +129,12 @@ struct Token *gen2token(struct Gen_type_t *gentype){
             tok = (struct Token *)malloc(sizeof(struct Token));
             strcpy(tok->tok, gentype->value.op);
             tok->type = TOKEN_REGULAR;
+            break;
+
+        case TYPE_EMPTY:
+            tok = (struct Token *)malloc(sizeof(struct Token));
+            memset(tok->tok, 0, 128);
+            tok->type = TOKEN_STRING;
             break;
 
         default:
