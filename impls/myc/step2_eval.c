@@ -92,11 +92,6 @@ struct Gen_type_t *apply(struct Gen_type_t *op, struct Gen_type_t **args, struct
     struct env_entry *ent;
     struct Gen_type_t *ret = NULL;
 
-    if(op == NULL){
-        ret = make_empty();
-        return ret;
-    }
-
     switch (op->type){
         case TYPE_OPERATOR:
             ent = lookup_env(env, op->value.op);
@@ -129,17 +124,24 @@ struct Gen_type_t *eval(struct AST_Node *root, struct env_t *env){
                    return NULL;
             }
         }
-
+        
         int root_isleaf = 1;
+
+        if(!args[0] || args[0]->type != TYPE_OPERATOR){
+            eval_result = make_list(args);
+            root_isleaf = 0;
+        }else{
+            eval_result = apply(args[0], &(args[1]), env);
+            if(eval_result == NULL){
+                return NULL;
+            }
+        }
+        
         for(int i=0; i<64; i++){
             if(root->ops[i] != NULL)
                 root_isleaf &= root->ops[i]->isleaf;
         }
 
-        eval_result = apply(args[0], &(args[1]), env);
-        if(eval_result == NULL){
-            return NULL;
-        }
         root->gen_val = eval_result;
         root->isleaf = root_isleaf;
         return eval_result;

@@ -38,13 +38,16 @@ struct Gen_type_t *make_operator(char *x){
     return ret;
 }
 
-/*
- * Now we assert all lists are empty list
- * Gonna change it in future
- */
-struct Gen_type_t *make_list(){
+struct Gen_type_t *make_list(struct Gen_type_t **lst){
+    struct Gen_type_t *pt;
+
     struct Gen_type_t *ret = (struct Gen_type_t*)malloc(sizeof(struct Gen_type_t));
+    ret->value.list = (struct Gen_type_t**)calloc(64, sizeof(struct Gen_type_t*));
     ret->type = TYPE_LIST;
+    for(int i=0; lst[i]; i++){
+        ret->value.list[i] = lst[i];
+    }
+
     return ret;
 }
 
@@ -129,12 +132,6 @@ struct Token *gen2token(struct Gen_type_t *gentype){
             tok = (struct Token *)malloc(sizeof(struct Token));
             strcpy(tok->tok, gentype->value.op);
             tok->type = TOKEN_REGULAR;
-            break;
-
-        case TYPE_EMPTY:
-            tok = (struct Token *)malloc(sizeof(struct Token));
-            memset(tok->tok, 0, 128);
-            tok->type = TOKEN_STRING;
             break;
 
         default:

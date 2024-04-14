@@ -32,6 +32,16 @@ static int is_integer(char *num){
     return 1;
 }
 
+int is_operator(char *str){
+    int oplist_len = sizeof(operator)/sizeof(char*);
+
+    for(int i=0; i<oplist_len; i++){
+        if(strcmp(operator[i], str) == 0)
+            return 1;
+    }
+    return 0;
+}
+
 static int get_token_len(char *st){
     for(int i=0; i<sizeof(single_symtab); i++){
         if(*st == single_symtab[i]){
@@ -246,6 +256,26 @@ struct AST_Node *AST_create(struct Reader *tk_reader, int begin, int end){
    return AST_Node_create(NULL, ops, 0);
 }
 
+void print_list(struct Gen_type_t *lst){
+    struct Token *tok;
+    if(lst->type != TYPE_LIST){
+        tok = gen2token(lst);
+        printf("%s", tok->tok);
+        free(tok);
+        return; 
+    }
+
+    printf("(");
+    for(int i=0; lst->value.list[i]; i++){
+        print_list(lst->value.list[i]);
+        if(lst->value.list[i+1] != NULL)
+            printf(" ");
+    }
+    printf(")");
+
+    return;
+}
+
 void pr_str(struct AST_Node *pos){
     struct Token *tok;
     if(pos == NULL) return;
@@ -256,7 +286,10 @@ void pr_str(struct AST_Node *pos){
         free(tok);
         printf("%s", pos->token.tok);
         return;
-    } 
+    }else if(pos->gen_val->type == TYPE_LIST){
+        print_list(pos->gen_val);
+        return;
+    }
 
     printf("(");
     for(int i=0; i<63; i++){
